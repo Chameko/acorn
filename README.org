@@ -1,0 +1,54 @@
+* Acorn
+Acorn is a yet another markup format for a personal wiki. It aims to have a minimal base implementation, that can be expanded upon if needed.
+** Design
+Acorn is designed to be similar to the org and markdown formats, with a few changes to make its easier to parse.
+*** Headings
+Headings are defined with ~=~
+#+BEGIN_SRC acorn
+  = Heading 1
+  == Heading 2
+#+END_SRC
+*** Formatting
+For formatting characters to be valid they must have a space before to start the emphasis or after to end the emphasis i.e. ~_/word/_~ (where _ is a whitespace) and will not work inside a word i.e. ~/wor/d~. They also must be applied and unapplied in the same order i.e. ~/*word*/~ and not ~/*word/*~
+| Formatting     | Format | Output |
+| Bold           | ~*word*~ | *word*   |
+| Italics        | ~/word/~ | /word/   |
+| Strike Through | ~~word~~ | +word+   |
+| Underline      | ~_word_~ | _word_   |
+| Monospace      | ~`word`~ | ~word~   |
+*** Super/Subscript
+| Super | ~word^{hi}~ | word^{hi} |
+| Sub   | ~word_{hi}~ | word_{hi} |
+*** Lists
+Unordered
+#+BEGIN_SRC acorn
+  - Item 1
+  -- Item 2
+#+END_SRC
+
+Ordered
+#+BEGIN_SRC acorn
+  1. Item
+  2. Another Item
+  ~. 1. Nested ordered lists
+#+END_SRC
+*** Links
+| Format            | Appearance |
+| ~[[address]]~       | _address_    |
+| ~[[address](name)]~ | _name_       |
+*** Macros
+Acorn is designed to be expanded. There are three kinds of macros: Block macros, attribute macros and function macros. Block macros can have custom delimiters, but the standard format is
+#+BEGIN_SRC acorn
+  @+Name(parameter1, parameter2, ...)
+  @+End
+#+END_SRC
+This macro takes in the parameters and any information between the two delimiters. It up to the implementer what to do with this information.
+
+Another kind of macro is the function macro which looks like ~@@Macro(param1, param2, ...)~. This acts as a function, taking in different parameters.
+
+Finally there is the attribute macro
+#+BEGIN_SRC acorn
+  @=MakeCooler
+  = Heading
+#+END_SRC
+This is a special case of function macro where the first parameter is the block its attached to
