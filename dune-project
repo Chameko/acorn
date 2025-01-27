@@ -19,7 +19,11 @@
  (name acorn)
  (synopsis "A markup format for kakoune")
  (description "A markup format for kakoune")
- (depends ocaml ppx_expect ppx_deriving)
+ (depends
+   ocaml
+   ppx_expect
+   ppx_deriving
+   (re (>= 1.9.0)))
  (tags
   (topics "to describe" your project)))
 

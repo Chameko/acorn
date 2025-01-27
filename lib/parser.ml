@@ -12,6 +12,10 @@ type t = {
    on succesfull parsing *)
 and 'a parser = t -> t option
 
+let check_number string =
+  let regex = Re.Emacs.compile_pat "^[0-9]+$" in
+  Re.execp regex string
+
 let add_item token p_state =
   {p_state with ast = Green.add_item p_state.ast token}
 
@@ -177,8 +181,13 @@ let rec contents_parser p_state ?(exit=fun _ -> None) () =
             (* Unordered list *)
             | Some Token.Dash ->
                (match ulist_parser (start_node Green.UList p_state) with
-               | Some p_state -> contents_parser (end_node p_state) ~exit  ()
+               | Some p_state -> contents_parser (end_node p_state) ~exit ()
                | None -> contents_parser p_state ~exit ())
+            (* Ordered list *)
+            | Some Token.Text _ | Some Token.Tilde ->
+               (match olist_parser (start_node Green.OList p_state) with
+                | Some p_state -> contents_parser (end_node p_state) ~exit ()
+                | None -> contents_parser p_state ~exit ())
             | _ -> continue p_state)
         | _ -> continue p_state
 
@@ -325,13 +334,16 @@ and link_parser p_state =
 (** Unordered list parser *)
 and ulist_parser p_state =
   let rec ulist_level_parser p_state =
-    match current p_state with
-    | Some Token.Dash ->
-       ulist_level_parser (advance (add_item Token.Dash p_state))
-    | Some Token.Whitespace w ->
-       Some (advance (add_item (Token.Whitespace w) p_state))
-    | Some Token.Newline ->
-       Some p_state
+    match (current p_state, current (advance p_state)) with
+    | (Some Token.Dash, Some Token.Whitespace w) ->
+       let p_state =
+         p_state
+         |> add_item Token.Dash |> advance
+         |> add_item (Token.Whitespace w) |> advance
+       in
+       (match ulist_level_parser p_state with
+        | Some p_state -> Some p_state
+        | None -> Some p_state)
     | _ -> None
   in
 
@@ -354,6 +366,54 @@ and ulist_parser p_state =
      | None -> Some p_state)
   | None -> None
 
+(** Ordered list parser *)
+and olist_parser p_state =
+  let rec olist_level_parser p_state =
+    match (current p_state, advance p_state |> current, advance p_state |> advance |> current) with
+    | (Some (Token.Text t), Some Token.Dot, Some (Token.Whitespace w)) ->
+       if check_number t then
+         let p_state =
+           p_state
+           |> add_item (Token.Text t) |> advance
+           |> add_item Token.Dot |> advance
+           |> add_item (Token.Whitespace w) |> advance
+         in
+         match olist_level_parser p_state with
+         | Some p_state -> Some p_state
+         | None -> Some p_state
+       else
+         None
+    | (Some Token.Tilde, Some Token.Dot, Some (Token.Whitespace w)) ->
+       let p_state =
+         p_state
+         |> add_item Token.Tilde |> advance
+         |> add_item Token.Dot |> advance
+         |> add_item (Token.Whitespace w) |> advance
+       in
+       (match olist_level_parser p_state with
+       | Some p_state -> Some p_state
+       | None -> Some p_state)
+    | _ -> None
+  in
+
+  (* Parse list *)
+  match olist_level_parser p_state with
+  (* We have list markers *)
+  | Some p_state ->
+     (* Parse normal content until Newline *)
+     let p_state = contents_parser
+       p_state
+       ~exit:(fun p_state ->
+         match current p_state with
+         | Some Token.Newline ->
+            Some (advance (add_item Token.Newline p_state))
+         | _ -> None)
+       ()
+     in
+     (match olist_parser p_state with
+     | Some p_state -> Some p_state
+     | None -> Some p_state)
+  | None -> None
 
 (** Parse the initial contents. Special due to emphasis not requiring
  whitespace before the emphasis character *)
@@ -362,7 +422,6 @@ let init_content_parser p_state =
   | None -> p_state
   | Some Token.Star
     | Some Token.Slash
-    | Some Token.Tilde
     | Some Token.Underscore
     | Some Token.Backtick ->
      (match emph_text_parser p_state with
@@ -371,6 +430,20 @@ let init_content_parser p_state =
         (match as_text_parser p_state with
         | Some p_state -> contents_parser p_state ()
         | None -> p_state))
+  (* As tilde is used for both olist and emphasis we must test one character ahead *)
+  | Some Token.Tilde ->
+     (match current (advance p_state) with
+      | Some Token.Dot ->
+         (match olist_parser (start_node Green.OList p_state) with
+          | Some p_state -> contents_parser (end_node p_state) ()
+          | None -> contents_parser p_state ())
+      | _ ->
+         (match emph_text_parser p_state with
+          | Some p_state -> contents_parser p_state ()
+          | None ->
+             (match as_text_parser p_state with
+              | Some p_state -> contents_parser p_state ()
+              | None -> p_state)))
   | Some Token.LSquareB ->
      (match link_parser p_state with
       | Some p_state -> contents_parser p_state ()
@@ -380,6 +453,10 @@ let init_content_parser p_state =
           | None -> p_state))
   | Some Token.Dash ->
      (match ulist_parser (start_node Green.UList p_state) with
+      | Some p_state -> contents_parser (end_node p_state) ()
+      | None -> contents_parser p_state ())
+  | Some (Token.Text _) ->
+     (match olist_parser (start_node Green.OList p_state) with
       | Some p_state -> contents_parser (end_node p_state) ()
       | None -> contents_parser p_state ())
   | _ ->

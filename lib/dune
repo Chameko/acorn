@@ -1,4 +1,5 @@
 (library
+ (libraries re)
  (preprocess (pps ppx_deriving.show ppx_deriving.eq))
  (name acorn))
 (env (dev (flags :standard -warn-error -27-32-6)))
