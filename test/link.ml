@@ -371,3 +371,25 @@ let%expect_test "Emphasis in title" =
                        Token.RSquareB at 32..33
     end at 33
     |}]
+
+let%expect_test "Incomplete emphasis label" =
+  test "[(the *github)[www.github.com]]";
+  [%expect {|
+    Token.LSquareB at 0..1
+    Token.LParen at 1..2
+    (Token.Text "the") at 2..5
+    (Token.Whitespace " ") at 5..6
+    Ast.Green.Bold at 6
+                       Token.Star at 6..7
+                       (Token.Text "github") at 7..13
+                       Token.RParen at 13..14
+                       Token.LSquareB at 14..15
+                       (Token.Text "www") at 15..18
+                       Token.Dot at 18..19
+                       (Token.Text "github") at 19..25
+                       Token.Dot at 25..26
+                       (Token.Text "com") at 26..29
+                       Token.RSquareB at 29..30
+                       Token.RSquareB at 30..31
+    end at 31
+    |}]

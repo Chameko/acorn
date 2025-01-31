@@ -1,4 +1,12 @@
 (executable
- (public_name acorn)
+ (public_name kakorn)
  (name main)
- (libraries acorn))
+ (libraries
+   acorn
+   lwt
+   lwt.unix
+   logs
+   core
+   core_unix
+   cmdliner))
+(env (dev (flags :standard -warn-error -27-32-6-26)))

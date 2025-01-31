@@ -23,7 +23,11 @@
    ocaml
    ppx_expect
    ppx_deriving
-   (re (>= 1.9.0)))
+  (core (>= 0.17.1))
+  (core_unix (>= 0.17.1))
+  (lwt (>= 5.5.0))
+  (logs (>= 0.7.0))
+  (cmdliner (>= 1.3.0)))
  (tags
   (topics "to describe" your project)))
 
