@@ -1,30 +1,32 @@
 open Cmdliner
 open Paths
 open Server
+open Client
 
 (** Features for acorn *)
 type features = Highlight | All
 
 (** Function called on start *)
 let start init kakoune server request features =
-  let () = Printf.printf "CLI ARGS: INIT: %d\nKAK: %B\nSERVER: %B\n"
+  Printf.printf "CLI ARGS: INIT: %d\nKAK: %B\nSERVER: %B\n"
     init
     kakoune
-    server
-  in
-  let () = match request with
+    server;
+  match request with
   | Some request -> Printf.printf "REQ: %s\n" request
-  | None -> Printf.printf "REQ: NONE\n"
-  in
+  | None -> Printf.printf "REQ: NONE\n";
+  Logs.set_reporter @@ K_error.lwt_reporter ();
+  Logs.set_level (Some Logs.Debug);
   Printf.printf "FEATURES: ";
   List.iter (fun f -> Printf.printf "%s" f) features;
   Printf.printf "\n";
   match paths () with
   | Error e -> Printf.printf "%s" @@ K_error.output e
   | Ok paths ->
-     match start_server paths with
-     | Error e -> Printf.printf "%s" @@ K_error.output e
-     | Ok _ -> ()
+    if server then
+      Lwt_main.run (start_server paths)
+    else
+      Lwt_main.run (start_client paths)
 
 let init =
   let doc = "Initialise the server from kakoune." in
