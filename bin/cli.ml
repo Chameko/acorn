@@ -24,7 +24,7 @@ let start init kakoune server request features =
   | Error e -> Printf.printf "%s" @@ K_error.output e
   | Ok paths ->
     if server then
-      Lwt_main.run (start_server paths)
+      start_server paths
     else
       Lwt_main.run (start_client paths)
 
