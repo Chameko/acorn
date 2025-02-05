@@ -86,7 +86,11 @@ let accept_connection conn =
   let handle_connection_map ch =
     match ch with
     | Error e -> return_error e
-    | Ok (ic, oc) -> handle_connection ic oc () >>= (fun res -> Lwt_unix.close fd >>= (fun () -> return res))
+    | Ok (ic, oc) ->
+      handle_connection ic oc ()
+      >>= (fun res -> return @@ Lwt_unix.shutdown fd Lwt_unix.SHUTDOWN_ALL
+      >>= (fun () -> Lwt_unix.close fd)
+      >>= (fun () -> return res))
   in
   catch channels
   (fun e ->
@@ -135,7 +139,7 @@ let start_server paths =
             (* Run server loop *)
             serve_loop sock ()
             (* Close socket file *)
-            >>= (fun res -> Lwt_unix.close sock >|= (fun () -> res))
+            >>= (fun res -> Lwt_unix.shutdown sock Lwt_unix.SHUTDOWN_ALL; Lwt_unix.close sock >|= (fun () -> res))
           | Error e ->
             return_error e
           in

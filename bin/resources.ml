@@ -49,8 +49,7 @@ let create_dir paths =
 let create_socket () =
   let open Lwt_unix in
   let socket () = return @@ socket PF_UNIX SOCK_STREAM 0
-  >>= (fun sock -> setsockopt sock SO_REUSEADDR true; return sock)
-  >>= (fun sock -> Logs_lwt.debug (fun m -> m "SO_REUSEADDR: %B" @@ getsockopt sock SO_REUSEADDR) >>= (fun () -> return_ok sock))
+  >>= (fun sock -> return_ok sock)
   in
   catch socket (fun exn ->
     Logs_lwt.err (fun m -> m "Failed to create socket: %s" @@ Exn.to_string exn)
@@ -61,14 +60,22 @@ let create_server_socket paths () =
   let open Lwt_unix in
   let bind_and_listen sock =
     match sock with
-    | Ok sock -> bind sock @@ ADDR_UNIX(socket_file paths)
+    | Ok sock ->
+      bind sock @@ ADDR_UNIX(socket_file paths)
       >>= fun () -> listen sock 10; return @@ Ok(sock)
     | Error e -> return @@ Error e
   in
+  
+  let sock = create_socket () in
 
   catch (fun () ->
-    create_socket () >>= bind_and_listen)
+    sock >>= bind_and_listen)
   (fun exn ->
-    Logs_lwt.err (fun m -> m "Failed to bind socket: %s" @@ Exn.to_string exn)
-    >>= (fun () -> return @@ Error(K_error.FailedToCreateSocket)))
+    match exn with
+    | Unix_error (EADDRINUSE, _, _) ->
+      unlink @@ socket_file paths |> Lwt.ignore_result;
+      sock >>= bind_and_listen
+    | _ ->
+      Logs_lwt.err (fun m -> m "Failed to bind socket: %s" @@ Exn.to_string exn)
+      >>= (fun () -> return @@ Error(K_error.FailedToCreateSocket)))
 
