@@ -16,45 +16,58 @@ let handle_message msg =
 
 (** Handle the connection *)
 let rec handle_connection ic oc () =
-  catch (fun () ->
-  Lwt_io.read_line_opt ic >>=
-    (fun msg ->
+  try%lwt
+    (* Recieve message *)
+    let%lwt msg = Lwt_io.read_line_opt ic in
+    
+    (* Process message *)
     match msg with
     | Some msg ->
       let reply, cont, term = handle_message msg in
-      Logs_lwt.app (fun m -> m "%s" reply)
-      >>= (fun () -> Lwt_io.write_line oc reply)
-      >>= (fun () -> 
+      (* Output and reply to message *)
+      let%lwt () = Logs_lwt.app (fun m -> m "%s" reply) in
+      let%lwt () = Lwt_io.write_line oc reply in
+      (* Determine to continue *)
       if cont then
         handle_connection ic oc ()
       else
-        return_ok term)
+        return_ok term
     | None -> 
-      Logs_lwt.info (fun m -> m "Connection closed")
-      >>= (fun () -> return_ok @@ true)))
-  (fun exn ->
-    Logs_lwt.err (fun m -> m "Failed to read from client: %s" @@ Exn.to_string exn)
-    >|= (fun () -> Error K_error.FailedToRecvClient))
+      (* Connection terminated *)
+      let%lwt () = Logs_lwt.info (fun m -> m "Connection closed") in
+      return_ok @@ true
+  with
+    | Core_unix.Unix_error (e, _, _) ->
+      return_error @@ K_error.SocketIOFailure ("Failed to communicate with client: " ^ Core_unix.Error.message e)
 
 (** Check if the server is running already *)
 let is_server_running paths =
   Logs.debug (fun m -> m "Determining if server is already running");
+  (* Function for reading the PID file *)
   let read_pid_file () = In_channel.with_file (Paths.pid_file paths) ~f:(fun ic ->
     try
       Ok (Stdlib.String.trim @@ In_channel.input_all ic)
     with
     | Sys_error e ->
-      Logs.err (fun m -> m "Failed to read PID file %s" e );
-      Error K_error.FailedToReadFile)
+      Error (K_error.FileIOFailure ("Failed to read PID file: " ^ e)))
   in
+
+  (* Get the pid *)
   let pid =
-    try read_pid_file () with Sys_error e ->
-      Logs.debug (fun m -> m "Failed to read PID file %s" e);
-      Logs.debug (fun m -> m "Attempting to create PID file and try again");
-      try Result.((create_pid paths) >>= read_pid_file) with Sys_error e ->
+    try
+      read_pid_file () 
+    with
+      Sys_error e ->
+      Logs.debug (fun m -> m "Failed to read PID file: %s" e);
+      Logs.debug (fun m -> m "Attempting to create PID file and trying again");
+      try
+        Result.(create_pid paths >>= read_pid_file)
+      with 
+      | Sys_error e ->
         Logs.err(fun m -> m "Failed to read PID file %s" e);
-        Error K_error.FailedToReadFile
+        Error (K_error.FileIOFailure ("Failed to read PID file: " ^ e))
   in
+
   (* Check which process the PID belongs to *)
   let comm pid =
     let ic =
@@ -65,56 +78,46 @@ let is_server_running paths =
         (* If the PID is us then we're all good :) *)
         Ok(false)
       else
-        Ok (String.equal (In_channel.input_all ic) "kakorn")
+        (* Check if another server is running *)
+        let output = Stdlib.String.trim @@ In_channel.input_all ic in
+        Ok (String.equal (output) "kakorn")
     with
     | Sys_error e ->
-      Logs.err (fun m -> m "Failed to read command %s" e);
-      Error K_error.FailedToReadFile
+      Error (K_error.CommandIOFailure ("Failed to read from command: " ^ e))
   in
   Result.(pid >>= comm)
 
 (** Accept a connection *)
 let accept_connection conn =
   let fd, _ = conn in
-  let channels () =
-    Logs_lwt.debug (fun m -> m "Accepting connection")
-    >>= (fun () -> return_ok (
-      Lwt_io.of_fd ~mode:Lwt_io.Input fd,
-      Lwt_io.of_fd ~mode:Lwt_io.Output fd
-    ))
-  in
-  let handle_connection_map ch =
-    match ch with
-    | Error e -> return_error e
-    | Ok (ic, oc) ->
-      handle_connection ic oc ()
-      >>= (fun res -> return @@ Lwt_unix.shutdown fd Lwt_unix.SHUTDOWN_ALL
-      >>= (fun () -> Lwt_unix.close fd)
-      >>= (fun () -> return res))
-  in
-  catch channels
-  (fun e ->
-    Logs_lwt.err (fun m -> m "Failed creating channels for connection: %s" @@ Exn.to_string e)
-    >>= (fun () -> Lwt_unix.close fd >>= fun () -> return_error K_error.FailedConnection))
-  >>= handle_connection_map
+
+  (try%lwt
+    let%lwt () = Logs_lwt.debug (fun m -> m "Accepting connection") in
+    let ic = Lwt_io.of_fd ~mode:Lwt_io.Input fd in
+    let oc = Lwt_io.of_fd ~mode:Lwt_io.Output fd in
+    handle_connection ic oc ()
+  with
+  | Core_unix.Unix_error (e, _, _) ->
+    return_error @@ K_error.SocketIOFailure ("Failed to establish client I/O channels: " ^ Core_unix.Error.message e))
+  [%lwt.finally
+    Lwt_unix.close fd]
 
 (** Main server loop *)
 let rec serve_loop sock () =
-  let accept () =
-    catch (fun () -> Lwt_unix.accept sock >>= return_ok)
-    (fun exn ->
-      Logs_lwt.err (fun m -> m "Failed to accept connection: %s" @@ Exn.to_string exn)
-      >>= (fun () -> return_error K_error.FailedConnection))
-  in
   let serve res =
     match res with
     | Error e -> return_error e
     | Ok true -> serve_loop sock ()
     | Ok false -> return_ok ()
   in
-  accept ()
-  >>= (fun res -> match res with Ok conn -> accept_connection conn | Error e -> return_error e)
-  >>= serve
+
+  try%lwt
+    let%lwt conn = Lwt_unix.accept sock in
+    let%lwt res = accept_connection conn in
+    serve res
+  with
+  | Core_unix.Unix_error (e, _, _) ->
+    return_error @@ K_error.SocketIOFailure ("Failed to accept connection: " ^ Core_unix.Error.message e)
 
 (** Start server *)
 let start_server paths =
@@ -125,33 +128,31 @@ let start_server paths =
   | Ok () ->
     (* Check if the server is running *)
     match is_server_running paths with
+    (* No error and server running  *)
     | Ok true -> Logs.err (fun m -> m "%s" @@ K_error.output K_error.ServerAlreadyRunning)
+    (* Error  *)
     | Error e -> Logs.err (fun m -> m "%s" @@ K_error.output e)
+    (* No error and no other server *)
     | Ok false ->
-      Logs.debug (fun m -> m "Running server");
-      let promise =
-        (* Create socket *)
-        create_server_socket paths ()
-        (* Serve the socket *)
-        >>= (fun sock ->
-          let run () = match sock with
+      (* Create PID file *)
+      match create_pid paths with
+      | Error e -> Logs.err (fun m -> m "%s" @@ K_error.output e)
+      | Ok () ->
+        let promise =
+          let%lwt () = Logs_lwt.debug (fun m -> m "Running server") in
+          (* Create socket *)
+          let%lwt sock = create_server_socket paths () in
+          (* Serve the socket *)
+          let%lwt res = match sock with
           | Ok sock -> 
             (* Run server loop *)
             serve_loop sock ()
-            (* Close socket file *)
-            >>= (fun res -> Lwt_unix.shutdown sock Lwt_unix.SHUTDOWN_ALL; Lwt_unix.close sock >|= (fun () -> res))
           | Error e ->
             return_error e
           in
-          catch run (fun exn ->
-            Logs_lwt.err (fun m -> m "Fatal error: %s" @@ Exn.to_string exn)
-            >>= (fun () -> return_ok ())
-          ))
-        >>= (fun res ->
           match res with
-          | Ok () ->
-            Logs_lwt.app (fun m -> m "Server closed...")
-          | Error e ->
-            Logs_lwt.err (fun m -> m "%s" @@ K_error.output e))
-      in
-      Lwt_main.run promise
+          | Ok () -> return_unit
+          | Error e -> Logs_lwt.err (fun m -> m "%s" @@ K_error.output e)
+        in
+        Lwt_main.run promise
+

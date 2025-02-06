@@ -11,5 +11,7 @@
     core
     core_unix
     fmt
-    cmdliner))
+    cmdliner)
+  (preprocess
+    (pps lwt_ppx)))
 (env (dev (flags :standard -warn-error -27-32-6-26)))

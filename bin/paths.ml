@@ -12,7 +12,7 @@ let paths () =
   | None ->
      match Sys.getenv ("TMPDIR") with
      | Some d -> Ok { runtime_dir = Filename.concat d "kakorn"}
-     | None -> Error K_error.NoRuntimeDir
+     | None -> Error (K_error.FileIOFailure "No runtime directory")
 
 let pid_file paths =
   Filename.concat paths.runtime_dir "pid"

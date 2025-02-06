@@ -1,21 +1,17 @@
 (** Various error types for the server *)
 type error =
-  NoRuntimeDir
+| CommandIOFailure of string
+| FileIOFailure of string
 | ServerAlreadyRunning
-| FailedToCreateFiles
-| FailedToCreateSocket
-| FailedToReadFile
-| FailedConnection
-| FailedToRecvClient
+| SocketCreationFailure of string
+| SocketIOFailure of string
 
 let output = function
-  | NoRuntimeDir -> "Cannot find runtime directory"
-  | ServerAlreadyRunning -> "Server is already running"
-  | FailedToCreateFiles -> "Failed to create PID file"
-  | FailedToCreateSocket -> "Failed to create the socket"
-  | FailedConnection -> "Failed connection"
-  | FailedToRecvClient -> "Failed  to recieve message from client"
-  | FailedToReadFile -> "Failed to read file"
+| CommandIOFailure e -> "Failed to run external command: " ^ e
+| FileIOFailure e -> "File IO failed: " ^ e
+| ServerAlreadyRunning  -> "Server was already running"
+| SocketCreationFailure e -> "Socket creation failed: " ^ e
+| SocketIOFailure  e -> "Socket io failed: " ^ e
 
 let lwt_reporter () =
   let buf_fmt ~like =
