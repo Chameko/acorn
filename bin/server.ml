@@ -1,5 +1,5 @@
-open Core
 open Base
+open Stdio
 open Lwt
 open Resources
 
@@ -37,8 +37,8 @@ let rec handle_connection ic oc () =
       let%lwt () = Logs_lwt.info (fun m -> m "Connection closed") in
       return_ok @@ true
   with
-    | Core_unix.Unix_error (e, _, _) ->
-      return_error @@ K_error.SocketIOFailure ("Failed to communicate with client: " ^ Core_unix.Error.message e)
+    | Unix.Unix_error (e, _, _) ->
+      return_error @@ K_error.SocketIOFailure ("Failed to communicate with client: " ^ Unix.error_message e)
 
 (** Check if the server is running already *)
 let is_server_running paths =
@@ -71,10 +71,10 @@ let is_server_running paths =
   (* Check which process the PID belongs to *)
   let comm pid =
     let ic =
-      Core_unix.open_process_in ("ps -p " ^ pid ^ " -o comm=")
+      Unix.open_process_in ("ps -p " ^ pid ^ " -o comm=")
     in
     try
-      if String.equal (Core.Pid.to_string @@ Core_unix.getpid ()) pid then
+      if String.equal (Int.to_string @@ Unix.getpid ()) pid then
         (* If the PID is us then we're all good :) *)
         Ok(false)
       else
@@ -97,8 +97,8 @@ let accept_connection conn =
     let oc = Lwt_io.of_fd ~mode:Lwt_io.Output fd in
     handle_connection ic oc ()
   with
-  | Core_unix.Unix_error (e, _, _) ->
-    return_error @@ K_error.SocketIOFailure ("Failed to establish client I/O channels: " ^ Core_unix.Error.message e))
+  | Unix.Unix_error (e, _, _) ->
+    return_error @@ K_error.SocketIOFailure ("Failed to establish client I/O channels: " ^ Unix.error_message e))
   [%lwt.finally
     Lwt_unix.close fd]
 
@@ -116,8 +116,8 @@ let rec serve_loop sock () =
     let%lwt res = accept_connection conn in
     serve res
   with
-  | Core_unix.Unix_error (e, _, _) ->
-    return_error @@ K_error.SocketIOFailure ("Failed to accept connection: " ^ Core_unix.Error.message e)
+  | Unix.Unix_error (e, _, _) ->
+    return_error @@ K_error.SocketIOFailure ("Failed to accept connection: " ^ Unix.error_message e)
 
 (** Start server *)
 let start_server paths =

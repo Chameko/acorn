@@ -1,4 +1,4 @@
-(lang dune 3.16)
+(lang dune 3.17)
 
 (name acorn)
 
@@ -24,9 +24,8 @@
     ppx_expect
     ppx_deriving
     (fmt (>= 0.9.0))
-    (core (>= 0.17.1))
-    (core_unix (>= 0.17.1))
     (lwt (>= 5.5.0))
+    (stdio (>= 0.17.0))
     (lwt_ppx (>= 5.8.0))
     (logs (>= 0.7.0))
     (cmdliner (>= 1.3.0)))

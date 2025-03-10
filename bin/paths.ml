@@ -1,4 +1,4 @@
-open Core
+open Base
 
 type paths = {
     runtime_dir : string;
@@ -8,24 +8,24 @@ type paths = {
 let paths () =
   (* Get the runtime dir*)
   match Sys.getenv ("XDG_RUNTIME_DIR") with
-  | Some d -> Ok { runtime_dir = Filename.concat d "kakorn"}
+  | Some d -> Ok { runtime_dir = Stdlib.Filename.concat d "kakorn"}
   | None ->
      match Sys.getenv ("TMPDIR") with
-     | Some d -> Ok { runtime_dir = Filename.concat d "kakorn"}
+     | Some d -> Ok { runtime_dir = Stdlib.Filename.concat d "kakorn"}
      | None -> Error (K_error.FileIOFailure "No runtime directory")
 
 let pid_file paths =
-  Filename.concat paths.runtime_dir "pid"
+  Stdlib.Filename.concat paths.runtime_dir "pid"
 
 let buff_files paths name =
-  Filename.concat paths.runtime_dir @@ Filename.concat "buffs" name
+  Stdlib.Filename.concat paths.runtime_dir @@ Stdlib.Filename.concat "buffs" name
 
 let stderr_file paths =
-  Filename.concat paths.runtime_dir "stderr.txt"
+  Stdlib.Filename.concat paths.runtime_dir "stderr.txt"
 
 let stdout_file paths =
-  Filename.concat paths.runtime_dir "stdout.txt"
+  Stdlib.Filename.concat paths.runtime_dir "stdout.txt"
 
 let socket_file paths =
-  Filename.concat paths.runtime_dir "socket"
+  Stdlib.Filename.concat paths.runtime_dir "socket"
 

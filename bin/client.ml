@@ -1,5 +1,3 @@
-open Core
-open Core_unix
 open Lwt
 open Resources
 open Paths
@@ -18,8 +16,8 @@ let connect paths () =
     | Error e ->
       return_error e
   with
-  | Unix_error (e, _, _) ->
-    return_error @@ K_error.SocketIOFailure ("Failed to connect to socket: " ^ Error.message e)
+  | Unix.Unix_error (e, _, _) ->
+    return_error @@ K_error.SocketIOFailure ("Failed to connect to socket: " ^ Unix.error_message e)
 
 (** Handles the conenction *)
 let handle_connection ic oc msg () =
@@ -31,8 +29,8 @@ let handle_connection ic oc msg () =
       let%lwt () = Logs_lwt.debug (fun m -> m "Reading server response") in
       return_ok @@ Lwt_io.read_line_opt ic
     with
-    | Unix_error (e, _, _) ->
-      return_error @@ K_error.SocketIOFailure ("Failed to communicate with the server: " ^ Error.message e)
+    | Unix.Unix_error (e, _, _) ->
+      return_error @@ K_error.SocketIOFailure ("Failed to communicate with the server: " ^ Unix.error_message e)
   in
 
   (* Process server response *)
@@ -79,8 +77,8 @@ let start_client paths =
       | Ok () -> return_unit
       | Error e -> Logs_lwt.err (fun m -> m "%s" @@ K_error.output e)
     with
-    | Unix_error (e, _, _) ->
-      Logs_lwt.err (fun m -> m "%s" @@ K_error.output @@ K_error.SocketIOFailure ("Failed to establish socket I/O channels: " ^ Error.message e)))
+    | Unix.Unix_error (e, _, _) ->
+      Logs_lwt.err (fun m -> m "%s" @@ K_error.output @@ K_error.SocketIOFailure ("Failed to establish socket I/O channels: " ^ Unix.error_message e)))
   | Error e ->
     Logs_lwt.err (fun m -> m "%s" @@ K_error.output e)
 

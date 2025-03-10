@@ -1,7 +1,8 @@
+open Unix
 open Paths
 open Lwt
-open Core
-open Core_unix
+open Stdio
+open Base
 
 (** Create the pid file *)
 let create_pid paths =
@@ -24,7 +25,7 @@ let create_pid paths =
     Exn.protect ~f:(fun () ->
       try
         (* Read the file *)
-        Ok (Out_channel.output_string oc (Pid.to_string @@ getpid ()))
+        Ok (Out_channel.output_string oc (Int.to_string @@ Unix.getpid ()))
       with Sys_error e ->
         Error (K_error.FileIOFailure ("Failed to write to PID file: " ^ e)))
     (* Close the out channel *)
@@ -37,15 +38,15 @@ let create_dir paths =
   Logs.debug (fun m -> m "Creating kakorn directory");
   try
     (* Create the directory if needed *)
-    Ok(Core_unix.mkdir paths.runtime_dir)
+    Ok(Unix.mkdir paths.runtime_dir 0o755)
   with
   (* If the directory already exits thats fine *)
-  | Unix_error (Error.EEXIST, _, _) ->
+  | Unix_error (EEXIST, _, _) ->
     Logs.debug (fun m -> m "Using existing runtime directory");
     Ok (())
   (* Report any other error *)
   | Unix_error (e, _, _) ->
-    Error (K_error.FileIOFailure ("Failed to create runtime directory: " ^ Error.message e))
+    Error (K_error.FileIOFailure ("Failed to create runtime directory: " ^ error_message e))
 
 (** Create socket *)
 let create_socket () =
@@ -54,7 +55,7 @@ let create_socket () =
     Ok(socket PF_UNIX SOCK_STREAM 0)
   with
   | Unix_error (e, _, _) ->
-    Error(K_error.SocketCreationFailure ("Failed to create socket: " ^ Error.message e))
+    Error(K_error.SocketCreationFailure ("Failed to create socket: " ^ error_message e))
 
 (** Create a socket for the server *)
 let create_server_socket paths () =
@@ -80,7 +81,7 @@ let create_server_socket paths () =
       bind_and_listen ()
     with
     | Unix_error (e, _, _) ->
-      return_error @@ K_error.SocketCreationFailure ("Failed to bind to socket: " ^ Error.message e))
+      return_error @@ K_error.SocketCreationFailure ("Failed to bind to socket: " ^ error_message e))
   | Unix_error (e, _, _) ->
-    return_error @@ K_error.SocketCreationFailure ("Failed to bind socket: " ^ Error.message e)
+    return_error @@ K_error.SocketCreationFailure ("Failed to bind socket: " ^ error_message e)
 
