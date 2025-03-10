@@ -12,12 +12,13 @@ let output = function
   | ServerAlreadyRunning -> "Server was already running"
   | SocketCreationFailure e -> "Socket creation failed: " ^ e
   | SocketIOFailure e -> "Socket io failed: " ^ e
+;;
 
 let lwt_reporter () =
   let buf_fmt ~like =
     let b = Buffer.create 512 in
-    ( Fmt.with_buffer ~like b,
-      fun () ->
+    ( Fmt.with_buffer ~like b
+    , fun () ->
         let m = Buffer.contents b in
         Buffer.reset b;
         m )
@@ -42,3 +43,4 @@ let lwt_reporter () =
     reporter.Logs.report src level ~over:(fun () -> ()) k msgf
   in
   { Logs.report }
+;;
