@@ -2,10 +2,5 @@
  (name test_acorn)
  (inline_tests)
  (libraries acorn)
- (modules (:standard \ debug))
  (preprocess
   (pps ppx_expect)))
-
-(test
- (name debug)
- (modules debug))

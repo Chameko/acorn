@@ -52,3 +52,25 @@ Finally there is the attribute macro
   = Heading
 #+END_SRC
 This is a special case of function macro where the first parameter is the block its attached to
+** Hierarchy
+Acorn documents are constructed from a hierarchy of blocks
+*** Contents
+Contents contain the basic text that makes up the document. In general contents can contain other contents. Contents can include
+- Text (Note: While it can contain Newlines, two newlines leads to the creation of two [[Section][Sections]])
+- [[Links]]
+- [[Formatting][Emphasized text]]
+- [[Macros][Function Macros]]
+*** Blocks
+Acorn documents are given their structure via blocks.
+**** Section
+A section is a block that's created when some contents is separated via two newlines. It can contain multiple contents.
+**** Unordered List
+A list of unordered items. Each item in the list is considered its own [[Contents]] embedded in a [[Section]] block. See [[Lists]]
+**** Ordered List
+An ordered list of items. Similar to [[Unordered List]], each item is considered its own [[Contents]] embedded in a [[Section]] block. See [[Lists]]
+**** Block Macro
+A block macro is considered its own block. Unlike the other blocks it does not use contents, but instead interprets everything inside it as a string. See [[Macros]].
+**** Headings
+Headings hold other blocks. The heading itself is [[Contents]]. See [[Headings]]
+**** Attribute Macro
+Attribute macros hold the block they are attached to. See [[Macros]]
