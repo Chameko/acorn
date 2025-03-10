@@ -1,7 +1,7 @@
 (** The lexer is responsible for converting a string of text into tokens. *)
 
-type t
 (** Contains the lexer state *)
+type t
 
 val pp : Format.formatter -> t -> unit
 val show : t -> string

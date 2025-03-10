@@ -1,70 +1,196 @@
-type t = { source : string; position : int } [@@deriving show, eq]
+open Token
+
+type t =
+  { source : string
+  ; position : int
+  ; line : int
+  }
+[@@deriving show, eq]
 
 let parse_text src =
   (* Create the lexer *)
-  let lex = { source = src; position = 0 } in
+  let lex = { source = src; position = 1; line = 1 } in
   let get_char lex =
-    if lex.position < String.length lex.source then
-      Some lex.source.[lex.position]
+    if lex.position < String.length lex.source
+    then Some lex.source.[lex.position]
     else None
   in
-
-  (* Gets the next token in the lexer *)
-  let next_token lex =
-    (get_char lex, { source = lex.source; position = lex.position + 1 })
-  in
-
+  (* Gets the next char in the lexer *)
+  let next_char lex = get_char lex, { lex with position = lex.position + 1 } in
   (* Lexes a token *)
   let lex_token lex =
-    let c, lex = next_token lex in
+    let c, lex = next_char lex in
     match c with
+    | None -> None, lex
     | Some c ->
-        ( (match c with
-          | '-' -> Some Token.Dash
-          | '*' -> Some Token.Star
-          | '/' -> Some Token.Slash
-          | '_' -> Some Token.Underscore
-          | '`' -> Some Token.Backtick
-          | '~' -> Some Token.Tilde
-          | '^' -> Some Token.Carret
-          | '[' -> Some Token.LSquareB
-          | ']' -> Some Token.RSquareB
-          | '(' -> Some Token.LParen
-          | ')' -> Some Token.RParen
-          | '.' -> Some Token.Dot
-          | '=' -> Some Token.Equals
-          | ',' -> Some Token.Comma
-          | '\n' -> Some Token.Newline
-          | '@' -> (
-              match next_token lex with
-              | Some '@', _ -> Some Token.AtAt
-              | Some '+', _ -> Some Token.AtPlus
-              | Some '=', _ -> Some Token.AtEquals
-              | _ -> Some (Token.Text "@"))
-          | ' ' -> Some (Token.Whitespace " ")
-          | c -> Some (Token.Text (String.make 1 c))),
-          lex )
-    | None -> (None, lex)
+      (match c with
+       | '-' ->
+         ( Some
+             { ty = Token.Dash
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '*' ->
+         ( Some
+             { ty = Token.Star
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '/' ->
+         ( Some
+             { ty = Token.Slash
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '_' ->
+         ( Some
+             { ty = Token.Underscore
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '`' ->
+         ( Some
+             { ty = Token.Backtick
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '~' ->
+         ( Some
+             { ty = Token.Tilde
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '^' ->
+         ( Some
+             { ty = Token.Carret
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '[' ->
+         ( Some
+             { ty = Token.LSquareB
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | ']' ->
+         ( Some
+             { ty = Token.RSquareB
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '(' ->
+         ( Some
+             { ty = Token.LParen
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | ')' ->
+         ( Some
+             { ty = Token.RParen
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '.' ->
+         ( Some
+             { ty = Token.Dot
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '=' ->
+         ( Some
+             { ty = Token.Equals
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | ',' ->
+         ( Some
+             { ty = Token.Comma
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | '\n' ->
+         ( Some
+             { ty = Token.Newline
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , { lex with line = lex.line + 1; position = 1 } )
+       | '@' ->
+         (match next_char lex with
+          | Some '@', _ ->
+            ( Some
+                { ty = Token.AtAt
+                ; location =
+                    { start = lex.position; stop = lex.position; line = lex.line }
+                }
+            , lex )
+          | Some '+', _ ->
+            ( Some
+                { ty = Token.AtPlus
+                ; location =
+                    { start = lex.position - 1; stop = lex.position; line = lex.line }
+                }
+            , lex )
+          | Some '=', _ ->
+            ( Some
+                { ty = Token.AtEquals
+                ; location =
+                    { start = lex.position - 1; stop = lex.position; line = lex.line }
+                }
+            , lex )
+          | _ ->
+            ( Some
+                { ty = Token.Text "@"
+                ; location =
+                    { start = lex.position - 1; stop = lex.position - 1; line = lex.line }
+                }
+            , lex ))
+       | ' ' ->
+         ( Some
+             { ty = Token.Whitespace " "
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex )
+       | c ->
+         ( Some
+             { ty = Token.Text (String.make 1 c)
+             ; location = { start = lex.position; stop = lex.position; line = lex.line }
+             }
+         , lex ))
   in
-
   (* Recursivly lexes the text *)
   let rec lex_tokens lex tokens =
     match lex_token lex with
     (* If we find previous text, we concat this to it *)
-    | Some (Token.Text t), lex -> (
-        match try Some (List.hd tokens) with _ -> None with
-        | Some (Token.Text t2) ->
-            lex_tokens lex (Token.Text (t2 ^ t) :: List.tl tokens)
-        | _ -> lex_tokens lex (Token.Text t :: tokens))
+    | Some { ty = Token.Text t; location }, lex ->
+      (match
+         try Some (List.hd tokens) with
+         | _ -> None
+       with
+       | Some { ty = Token.Text t2; location = { stop; _ } } ->
+         lex_tokens
+           lex
+           ({ ty = Token.Text (t2 ^ t)
+            ; location = { start = location.start; stop; line = location.line }
+            }
+            :: List.tl tokens)
+       | _ -> lex_tokens lex ({ ty = Token.Text t; location } :: tokens))
     (* Same for whitespace *)
-    | Some (Token.Whitespace w), lex -> (
-        match try Some (List.hd tokens) with _ -> None with
-        | Some (Token.Whitespace w2) ->
-            lex_tokens lex (Token.Whitespace (w2 ^ w) :: List.tl tokens)
-        | _ -> lex_tokens lex (Token.Whitespace w :: tokens))
+    | Some { ty = Token.Whitespace w; location }, lex ->
+      (match
+         try Some (List.hd tokens) with
+         | _ -> None
+       with
+       | Some { ty = Token.Whitespace w2; location = { stop; _ } } ->
+         lex_tokens
+           lex
+           ({ ty = Token.Whitespace (w2 ^ w)
+            ; location = { start = location.start; stop; line = location.line }
+            }
+            :: List.tl tokens)
+       | _ -> lex_tokens lex ({ ty = Token.Whitespace w; location } :: tokens))
     | Some tk, lex -> lex_tokens lex (tk :: tokens)
     | _ -> tokens
   in
-
   (* We flip our tokens so they're in the right order*)
   lex_tokens lex [] |> List.rev
+;;
