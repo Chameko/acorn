@@ -6,6 +6,33 @@ type range =
   }
 [@@deriving show, eq]
 
+let add_range r1 r2 =
+  if r1.line == r2.line
+  then [ { start = r1.start; stop = r2.stop; line = r1.line } ]
+  else [ r1; r2 ]
+;;
+
+let comp_range r1 r2 =
+  if r1.line < r2.line
+  then 1
+  else if r1.line > r2.line
+  then -1
+  else if r1.start < r2.start
+  then 1
+  else if r1.start > r2.start
+  then -1
+  else if r1.stop < r2.stop
+  then -1
+  else if r2.stop > r2.stop
+  then 1
+  else 0
+;;
+
+let extract_range source r1 =
+  let lines = String.split_on_char '\n' source in
+  String.sub (List.nth lines (r1.line - 1)) (r1.start - 1) (r1.stop - r1.start + 1)
+;;
+
 (** The type for tokens *)
 type tt =
   | Text of string (** General text *)

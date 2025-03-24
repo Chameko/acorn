@@ -3,10 +3,35 @@ open Token
 (** Containts types that make up the AST *)
 
 (** Multiple [range] *)
-type area = range array [@@deriving show, eq]
+type area = range list [@@deriving show, eq]
 
 (** Used when we need to know what the [arera] contains *)
 type raw = string * area [@@deriving show, eq]
+
+let flatten_ranges ranges =
+  let rec driver prev list =
+    match list with
+    | [] -> []
+    | hd :: tl ->
+      let combination = add_range prev hd in
+      (match combination with
+       | [ combination ] | [ _; combination ] -> driver combination tl
+       | _ -> failwith "unreachable")
+  in
+  let ranges = List.sort comp_range ranges in
+  driver (List.hd ranges) (List.tl ranges)
+;;
+
+let flatten_areas areas =
+  let ranges = List.flatten areas in
+  flatten_ranges ranges
+;;
+
+let rec extract_area source area =
+  match area with
+  | [] -> ""
+  | hd :: tl -> extract_range source hd ^ extract_area source tl
+;;
 
 (** Various formatting effects applied to text *)
 type formatting =
@@ -23,8 +48,10 @@ type formatting =
 type contents =
   | Text of area (** Text *)
   | Fmt of
-      { content : contents (** The inner text to be formatted*)
-      ; t_fmt : formatting (** The formatting type *)
+      { open_fmt : range (** Opening format tag *)
+      ; content : contents list (** The inner text to be formatted *)
+      ; end_fmt : range (** Ending format tag *)
+      ; fmt_ty : formatting (** The formatting type *)
       ; location : area
       } (** Formatted text *)
   | Link of
@@ -45,6 +72,11 @@ type contents =
       ; location : area
       } (** Function macro *)
 [@@deriving show, eq]
+
+let content_location = function
+  | Text t -> t
+  | Fmt { location; _ } | Link { location; _ } | FMacro { location; _ } -> location
+;;
 
 (** Blocks that make up an acorn file *)
 type block =
@@ -88,7 +120,7 @@ type block =
 
 type t = { file : block list } [@@deriving show, eq]
 
-let token_to_emph = function
+let token_to_fmt = function
   | Token.Star -> Some Bold
   | Token.Slash -> Some Italics
   | Token.Tilde -> Some StrikeThrough
@@ -97,7 +129,7 @@ let token_to_emph = function
   | _ -> None
 ;;
 
-let emph_to_token = function
+let fmt_to_token = function
   | Bold -> Token.Star
   | Italics -> Token.Slash
   | StrikeThrough -> Token.Tilde

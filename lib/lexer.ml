@@ -9,7 +9,7 @@ type t =
 
 let parse_text src =
   (* Create the lexer *)
-  let lex = { source = src; position = 1; line = 1 } in
+  let lex = { source = src; position = 0; line = 1 } in
   let get_char lex =
     if lex.position < String.length lex.source
     then Some lex.source.[lex.position]
@@ -18,7 +18,7 @@ let parse_text src =
   (* Gets the next char in the lexer *)
   let next_char lex = get_char lex, { lex with position = lex.position + 1 } in
   (* Lexes a token *)
-  let lex_token lex =
+  let rec lex_token lex =
     let c, lex = next_char lex in
     match c with
     | None -> None, lex
@@ -145,49 +145,38 @@ let parse_text src =
                 }
             , lex ))
        | ' ' ->
-         ( Some
+         (
+         match lex_token lex with
+         | (Some {ty = Token.Whitespace w; location = location2 }, lex2) ->
+         Some
+             { ty = Token.Whitespace (" " ^ w)
+             ; location = { start = lex.position; stop = location2.stop; line = lex.line }
+             }, lex2
+         | _ ->
+         Some
              { ty = Token.Whitespace " "
              ; location = { start = lex.position; stop = lex.position; line = lex.line }
-             }
-         , lex )
+             }, lex
+           )
        | c ->
-         ( Some
+         ( 
+         match lex_token lex with
+         | (Some { ty = Token.Text t; location = location2 }, lex2) ->
+         Some
+             { ty = Token.Text (String.make 1 c ^ t)
+             ; location = { start = lex.position; stop = location2.stop; line = lex.line }
+             }, lex2
+         | _ ->
+         Some
              { ty = Token.Text (String.make 1 c)
              ; location = { start = lex.position; stop = lex.position; line = lex.line }
-             }
-         , lex ))
+             }, lex
+         )
+       )
   in
   (* Recursivly lexes the text *)
   let rec lex_tokens lex tokens =
     match lex_token lex with
-    (* If we find previous text, we concat this to it *)
-    | Some { ty = Token.Text t; location }, lex ->
-      (match
-         try Some (List.hd tokens) with
-         | _ -> None
-       with
-       | Some { ty = Token.Text t2; location = { stop; _ } } ->
-         lex_tokens
-           lex
-           ({ ty = Token.Text (t2 ^ t)
-            ; location = { start = location.start; stop; line = location.line }
-            }
-            :: List.tl tokens)
-       | _ -> lex_tokens lex ({ ty = Token.Text t; location } :: tokens))
-    (* Same for whitespace *)
-    | Some { ty = Token.Whitespace w; location }, lex ->
-      (match
-         try Some (List.hd tokens) with
-         | _ -> None
-       with
-       | Some { ty = Token.Whitespace w2; location = { stop; _ } } ->
-         lex_tokens
-           lex
-           ({ ty = Token.Whitespace (w2 ^ w)
-            ; location = { start = location.start; stop; line = location.line }
-            }
-            :: List.tl tokens)
-       | _ -> lex_tokens lex ({ ty = Token.Whitespace w; location } :: tokens))
     | Some tk, lex -> lex_tokens lex (tk :: tokens)
     | _ -> tokens
   in
