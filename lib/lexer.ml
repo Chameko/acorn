@@ -145,34 +145,37 @@ let parse_text src =
                 }
             , lex ))
        | ' ' ->
-         (
-         match lex_token lex with
-         | (Some {ty = Token.Whitespace w; location = location2 }, lex2) ->
-         Some
-             { ty = Token.Whitespace (" " ^ w)
-             ; location = { start = lex.position; stop = location2.stop; line = lex.line }
-             }, lex2
-         | _ ->
-         Some
-             { ty = Token.Whitespace " "
-             ; location = { start = lex.position; stop = lex.position; line = lex.line }
-             }, lex
-           )
+         (match lex_token lex with
+          | Some { ty = Token.Whitespace w; location = location2 }, lex2 ->
+            ( Some
+                { ty = Token.Whitespace (" " ^ w)
+                ; location =
+                    { start = lex.position; stop = location2.stop; line = lex.line }
+                }
+            , lex2 )
+          | _ ->
+            ( Some
+                { ty = Token.Whitespace " "
+                ; location =
+                    { start = lex.position; stop = lex.position; line = lex.line }
+                }
+            , lex ))
        | c ->
-         ( 
-         match lex_token lex with
-         | (Some { ty = Token.Text t; location = location2 }, lex2) ->
-         Some
-             { ty = Token.Text (String.make 1 c ^ t)
-             ; location = { start = lex.position; stop = location2.stop; line = lex.line }
-             }, lex2
-         | _ ->
-         Some
-             { ty = Token.Text (String.make 1 c)
-             ; location = { start = lex.position; stop = lex.position; line = lex.line }
-             }, lex
-         )
-       )
+         (match lex_token lex with
+          | Some { ty = Token.Text t; location = location2 }, lex2 ->
+            ( Some
+                { ty = Token.Text (String.make 1 c ^ t)
+                ; location =
+                    { start = lex.position; stop = location2.stop; line = lex.line }
+                }
+            , lex2 )
+          | _ ->
+            ( Some
+                { ty = Token.Text (String.make 1 c)
+                ; location =
+                    { start = lex.position; stop = lex.position; line = lex.line }
+                }
+            , lex )))
   in
   (* Recursivly lexes the text *)
   let rec lex_tokens lex tokens =

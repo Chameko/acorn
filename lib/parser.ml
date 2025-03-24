@@ -4,9 +4,7 @@ type t =
   ; cursor : int
   }
 
-let init tokens  =
-  { tokens = tokens; cursor = 0; }
-;;
+let init tokens = { tokens; cursor = 0 }
 
 let check_number string =
   let regex = Re.Emacs.compile_pat "^[0-9]+$" in
