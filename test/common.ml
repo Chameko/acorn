@@ -5,7 +5,7 @@ let setup source =
   let parser = Acorn.Parser.init (Array.of_list tokens) in
   let rec driver p_state =
     match Parser.contents_parser p_state with
-    | Some (contents, p_state) -> contents :: driver p_state
+    | Some (contents, p_state) -> contents @ driver p_state
     | None -> []
   in
   driver parser
