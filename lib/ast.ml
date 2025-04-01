@@ -44,6 +44,10 @@ type formatting =
   | Sub
 [@@deriving show, eq]
 
+type delimited_content =
+  { open_delim: range; inner: area; close_delim: range}
+[@@deriving show, eq]
+
 (** Lowest level container in acorn *)
 type contents =
   | Text of area (** Text *)
@@ -56,16 +60,16 @@ type contents =
       } (** Formatted text *)
   | Link of
       { open_brace : range (** Opening brace of link *)
-      ; address : range * contents * range
         (** Contents and opening/closing braces of address section *)
-      ; name : (range * contents * range) option
-        (** Contente and opening/closing braces of name section *)
+      ; address : delimited_content
+        (** Contents and opening/closing braces of name section *)
+      ; name : delimited_content option
       ; close_brace : range (** Closing brace *)
       ; location : area
       } (** Link *)
   | FMacro of
       { symbol : range (** @@ symbol of the macro *)
-      ; name : raw (** Name of macro*)
+      ; name : range (** Name of macro*)
       ; open_bracket : range (** opening bracket of params *)
       ; param : (raw * raw) list (** Parameters of macro with their separating commas *)
       ; close_bracket : range (** closing bracket of params *)
