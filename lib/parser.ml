@@ -172,45 +172,55 @@ let link_parser p_state =
           then List.hd text
           else open_brace
       in
-      Some ({open_delim = open_brace; inner = text; close_delim = end_brace}, p_state)
+      Some ({ open_delim = open_brace; inner = text; close_delim = end_brace }, p_state)
     | None -> None
   in
   match lbrace_parser p_state with
   | None -> None
   | Some (open_brace, p_state) ->
     (* Case 1: Link first *)
-    match inner_parser lbrace_parser rbrace_parser p_state with
-    | Some (address, p_state) ->
-      (let name, p_state =
-      match inner_parser lparen_parser rparen_parser p_state with
-      | Some (res, p_state) -> (Some res, p_state)
-      | None -> (None, p_state)
-      in
-      match rbrace_parser p_state with
-      | None -> None
-      | Some (close_brace, p_state) ->
-        let location =
-        match (name, address) with
-        | (Some name, address)  ->
-            Ast.flatten_ranges [open_brace; address.open_delim]
-            @ address.inner @ [address.close_delim; name.open_delim] @ name.inner
-            @ [name.close_delim; close_brace]
-        | (None, address) ->
-          Ast.flatten_ranges [open_brace; address.open_delim] @ address.inner @ [address.close_delim; close_brace]
-        in
-        Some (Ast.Link {open_brace; address; name; close_brace; location}, p_state))
-  | None ->
-    (* Case 2: name first *)
-    match inner_parser lparen_parser rparen_parser p_state with
-    | None -> None
-    | Some (name, p_state) ->
-      match (inner_parser lbrace_parser rbrace_parser >> rbrace_parser) p_state with
-      | None -> None
-      | Some ((address, close_brace), p_state) ->
-        let location = Ast.flatten_ranges [open_brace; address.open_delim]
-        @ address.inner @ [address.close_delim; name.open_delim] @ name.inner
-        @ [name.close_delim; close_brace] in
-        Some (Ast.Link {open_brace; address; name = Some name; close_brace; location}, p_state)
+    (match inner_parser lbrace_parser rbrace_parser p_state with
+     | Some (address, p_state) ->
+       let name, p_state =
+         match inner_parser lparen_parser rparen_parser p_state with
+         | Some (res, p_state) -> Some res, p_state
+         | None -> None, p_state
+       in
+       (match rbrace_parser p_state with
+        | None -> None
+        | Some (close_brace, p_state) ->
+          let location =
+            match name, address with
+            | Some name, address ->
+              Ast.flatten_ranges [ open_brace; address.open_delim ]
+              @ address.inner
+              @ [ address.close_delim; name.open_delim ]
+              @ name.inner
+              @ [ name.close_delim; close_brace ]
+            | None, address ->
+              Ast.flatten_ranges [ open_brace; address.open_delim ]
+              @ address.inner
+              @ [ address.close_delim; close_brace ]
+          in
+          Some (Ast.Link { open_brace; address; name; close_brace; location }, p_state))
+     | None ->
+       (* Case 2: name first *)
+       (match inner_parser lparen_parser rparen_parser p_state with
+        | None -> None
+        | Some (name, p_state) ->
+          (match (inner_parser lbrace_parser rbrace_parser >> rbrace_parser) p_state with
+           | None -> None
+           | Some ((address, close_brace), p_state) ->
+             let location =
+               Ast.flatten_ranges [ open_brace; address.open_delim ]
+               @ address.inner
+               @ [ address.close_delim; name.open_delim ]
+               @ name.inner
+               @ [ name.close_delim; close_brace ]
+             in
+             Some
+               ( Ast.Link { open_brace; address; name = Some name; close_brace; location }
+               , p_state ))))
 ;;
 
 let rec contents_parser p_state =
@@ -231,7 +241,7 @@ let rec contents_parser p_state =
        (match beginning_check p_state with
         | None ->
           (* Regular parsing *)
-        (match (link_parser |? text_parser |? consume_parser) p_state with
+          (match (link_parser |? text_parser |? consume_parser) p_state with
            | Some (res, p_state) -> Some ([ res ], p_state)
            | None -> None)
         | Some (_, p_state) ->
@@ -303,4 +313,4 @@ and fmt_parser p_state =
     (match driver fmt_tags p_state with
      | Some (ast, p_state) -> Some ([ ast ], p_state)
      | None -> None)
-
+;;

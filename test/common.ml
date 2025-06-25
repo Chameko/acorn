@@ -27,7 +27,9 @@ let rec reconstruct_content source ppf content =
   | Ast.Link lnk ->
     let delimit_content_pp ppf dc =
       let open Ast in
-      Format.fprintf ppf "@[<hov>{@ open_delim: |%s|@ inner: |%s|@ close_delim: |%s|@ }]"
+      Format.fprintf
+        ppf
+        "@[<hov>{@ open_delim: |%s|@ inner: |%s|@ close_delim: |%s|@ }]"
         (Token.extract_range source dc.open_delim)
         (Ast.extract_area source dc.inner)
         (Token.extract_range source dc.close_delim)
@@ -36,8 +38,10 @@ let rec reconstruct_content source ppf content =
       ppf
       "@[<hov>Link {@ open: |%s|@ address: %a@ name: %a@ close: |%s|@ }@]"
       (Token.extract_range source lnk.open_brace)
-      (delimit_content_pp) lnk.address
-      (Format.pp_print_option delimit_content_pp) lnk.name
+      delimit_content_pp
+      lnk.address
+      (Format.pp_print_option delimit_content_pp)
+      lnk.name
       (Token.extract_range source lnk.close_brace)
   | _ -> Format.fprintf ppf "Unsupported :("
 ;;

@@ -62,17 +62,18 @@ let%expect_test "fmt_chain_test_2" =
 
 let%expect_test "fmt_link_test_1" =
   text_setup "[[github.com]]";
-  [%expect {|
+  [%expect
+    {|
     Link { open: |[|
     address: { open_delim: |[| inner: |github.com| close_delim: |]| }] name:
              close: |]| }
     |}]
 ;;
 
-
 let%expect_test "fmt_link_test_2" =
   text_setup "[[github.com](github)]";
-  [%expect {|
+  [%expect
+    {|
     Link { open: |[|
     address: { open_delim: |[| inner: |github.com| close_delim: |]| }]
              name: { open_delim: |(| inner: |github| close_delim: |)| }]
@@ -82,7 +83,8 @@ let%expect_test "fmt_link_test_2" =
 
 let%expect_test "fmt_link_test_3" =
   text_setup "[(github)[github.com]]";
-  [%expect {|
+  [%expect
+    {|
     Link { open: |[|
     address: { open_delim: |[| inner: |github.com| close_delim: |]| }]
              name: { open_delim: |(| inner: |github| close_delim: |)| }]
@@ -92,7 +94,8 @@ let%expect_test "fmt_link_test_3" =
 
 let%expect_test "fmt_link_test_bad_1" =
   text_setup "[[github.com] *Something*";
-  [%expect {|
+  [%expect
+    {|
     Text |[| Text |[| Text |github| Text |.| Text |com| Text |]| Text | |
     Fmt { open: |*| content: Text |Something| end: |*| formatting: |Ast.Bold| }
     |}]
@@ -100,7 +103,8 @@ let%expect_test "fmt_link_test_bad_1" =
 
 let%expect_test "fmt_link_test_bad_2" =
   text_setup "[[github.com](github]";
-  [%expect {|
+  [%expect
+    {|
     Text |[| Text |[| Text |github| Text |.| Text |com| Text |]| Text |(|
     Text |github|
     Text |]|
@@ -109,7 +113,8 @@ let%expect_test "fmt_link_test_bad_2" =
 
 let%expect_test "fmt_link_test_bad_3" =
   text_setup "[(github)]";
-  [%expect {|
+  [%expect
+    {|
     Text |[| Text |(| Text |github| Text |)|
     Text |]|
     |}]

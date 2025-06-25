@@ -1,8 +1,35 @@
 open Unix
-open Paths
 open Lwt
-open Stdio
 open Base
+
+type paths = { runtime_dir : string }
+
+(** Get the important paths/files *)
+let paths () =
+  (* Get the runtime dir*)
+  match Sys.getenv "XDG_RUNTIME_DIR" with
+  | Some d -> Ok { runtime_dir = d }
+  | None ->
+    (match Sys.getenv "TMPDIR" with
+     | Some d -> Ok { runtime_dir = d }
+     | None -> Error (K_error.FileIOFailure "No runtime directory"))
+;;
+
+let pid_file paths =
+  Stdlib.Filename.concat paths.runtime_dir @@ Stdlib.Filename.concat "kakorn" "pid"
+;;
+
+let buff_files paths name =
+  Stdlib.Filename.concat paths.runtime_dir
+  @@ Stdlib.Filename.concat "kakorn"
+  @@ Stdlib.Filename.concat "buffs" name
+;;
+
+let kakorn_dir paths = Stdlib.Filename.concat paths.runtime_dir "kakorn"
+let stderr_file paths = Stdlib.Filename.concat (kakorn_dir paths) "stderr.txt"
+let stdout_file paths = Stdlib.Filename.concat (kakorn_dir paths) "stdout.txt"
+let socket_file paths = Stdlib.Filename.concat (kakorn_dir paths) "socket"
+let kak_dir paths = Stdlib.Filename.concat paths.runtime_dir "kakoune"
 
 (** Create the pid file *)
 let create_pid paths =
@@ -11,7 +38,7 @@ let create_pid paths =
   let pid_file = pid_file paths in
   (* Create out channel to file (creates file if needed )*)
   let oc =
-    try Ok (Out_channel.create pid_file ?append:(Some false)) with
+    try Ok (Stdio.Out_channel.create pid_file ?append:(Some false)) with
     | Sys_error e -> Error (K_error.FileIOFailure ("Failed to create PID file: " ^ e))
   in
   (* Write the PID *)
@@ -20,7 +47,7 @@ let create_pid paths =
       ~f:(fun () ->
         try
           (* Read the file *)
-          Ok (Out_channel.output_string oc (Int.to_string @@ Unix.getpid ()))
+          Ok (Stdio.Out_channel.output_string oc (Int.to_string @@ Unix.getpid ()))
         with
         | Sys_error e ->
           Error (K_error.FileIOFailure ("Failed to write to PID file: " ^ e)))
@@ -35,7 +62,7 @@ let create_dir paths =
   Logs.debug (fun m -> m "Creating kakorn directory");
   try
     (* Create the directory if needed *)
-    Ok (Unix.mkdir paths.runtime_dir 0o755)
+    Ok (Unix.mkdir (kakorn_dir paths) 0o755)
   with
   (* If the directory already exits thats fine *)
   | Unix_error (EEXIST, _, _) ->
