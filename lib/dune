@@ -1,5 +1,4 @@
 (library
- (libraries re)
  (preprocess
   (pps ppx_deriving.show ppx_deriving.eq))
  (name acorn))

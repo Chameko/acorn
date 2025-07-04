@@ -19,13 +19,13 @@ let pid_file paths =
   Stdlib.Filename.concat paths.runtime_dir @@ Stdlib.Filename.concat "kakorn" "pid"
 ;;
 
-let buff_files paths name =
-  Stdlib.Filename.concat paths.runtime_dir
-  @@ Stdlib.Filename.concat "kakorn"
-  @@ Stdlib.Filename.concat "buffs" name
+let kakorn_dir paths = Stdlib.Filename.concat paths.runtime_dir "kakorn"
+let buff_dir paths = Stdlib.Filename.concat (kakorn_dir paths) "buffs"
+
+let buff_file paths session name =
+  Stdlib.Filename.concat (buff_dir paths) (Int.to_string session ^ "-" ^ name)
 ;;
 
-let kakorn_dir paths = Stdlib.Filename.concat paths.runtime_dir "kakorn"
 let stderr_file paths = Stdlib.Filename.concat (kakorn_dir paths) "stderr.txt"
 let stdout_file paths = Stdlib.Filename.concat (kakorn_dir paths) "stdout.txt"
 let socket_file paths = Stdlib.Filename.concat (kakorn_dir paths) "socket"

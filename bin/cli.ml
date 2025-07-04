@@ -53,15 +53,18 @@ let start init do_daemonize server request features =
         if do_daemonize
         then (
           let () = daemonize paths in
-          Server.start_server { paths; sessions = ref [||] })
-        else Server.start_server { paths; sessions = ref [||] }
+          Server.start_server { paths; sessions = ref [] })
+        else Server.start_server { paths; sessions = ref [] }
       else (
-        match%lwt Kak.kak_session init with
-        | Ok session when do_daemonize == true ->
+        let session = Kak.kak_session init in
+        if do_daemonize
+        then (
+          (* Dump the rc *)
+          Printf.printf "%s" Rc.init;
+          Stdlib.flush Stdlib.stdout;
           daemonize paths;
-          Server.start_server { paths; sessions = ref [| session |] }
-        | Ok session -> Server.start_server { paths; sessions = ref [| session |] }
-        | Error err -> Logs_lwt.err (fun m -> m "%s" @@ K_error.output err))
+          Server.start_server { paths; sessions = ref [ session ] })
+        else Server.start_server { paths; sessions = ref [ session ] })
     else Client.start_client ?req:request paths
 ;;
 

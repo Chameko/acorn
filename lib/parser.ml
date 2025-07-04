@@ -7,8 +7,9 @@ type t =
 let init tokens = { tokens; cursor = 0 }
 
 let check_number string =
-  let regex = Re.Emacs.compile_pat "^[0-9]+$" in
-  Re.execp regex string
+  match int_of_string_opt string with
+  | Some _ -> true
+  | None -> false
 ;;
 
 (** Get the current token *)

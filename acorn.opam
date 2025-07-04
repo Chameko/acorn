@@ -4,7 +4,7 @@ synopsis: "A markup format for kakoune"
 description: "A markup format for kakoune"
 maintainer: ["chameko"]
 authors: ["chameko"]
-license: "LICENSE"
+license: "MIT"
 tags: ["topics" "to describe" "your" "project"]
 homepage: "https://github.com/username/reponame"
 doc: "https://url/to/documentation"
@@ -16,7 +16,6 @@ depends: [
   "ppx_deriving"
   "ppx_sexp_conv"
   "sexplib" {>= "0.17.0"}
-  "re" {>= "1.12.0"}
   "fmt" {>= "0.9.0"}
   "lwt" {>= "5.5.0"}
   "stdio" {>= "0.17.0"}

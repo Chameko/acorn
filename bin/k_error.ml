@@ -5,6 +5,7 @@ type error =
   | ServerAlreadyRunning
   | SocketCreationFailure of string
   | SocketIOFailure of string
+  | BufferNotifFailure
 
 let output = function
   | CommandIOFailure e -> "Failed to run external command: " ^ e
@@ -12,6 +13,7 @@ let output = function
   | ServerAlreadyRunning -> "Server was already running"
   | SocketCreationFailure e -> "Socket creation failed: " ^ e
   | SocketIOFailure e -> "Socket io failed: " ^ e
+  | BufferNotifFailure -> "Failed to find watched buffer"
 ;;
 
 let lwt_reporter () =

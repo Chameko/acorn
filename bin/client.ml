@@ -19,20 +19,41 @@ let connect paths () =
     @@ K_error.SocketIOFailure ("Failed to connect to socket: " ^ Unix.error_message e)
 ;;
 
+let rec handle_message ic =
+  let open Sexplib in
+  let open Command in
+  match%lwt Lwt_io.read_line_opt ic with
+  | None -> Logs_lwt.debug (fun m -> m "Terminating...")
+  | Some msg ->
+    (match Sexp.of_string_conv msg Client.reply_of_sexp with
+     | `Result (Client.Debug len) ->
+       let%lwt msg = Lwt_io.read ~count:len ic in
+       let%lwt () = Logs_lwt.debug (fun m -> m "%s" msg) in
+       handle_message ic
+     | `Result (Client.Output len) ->
+       let%lwt msg = Lwt_io.read ~count:len ic in
+       let%lwt () = Logs_lwt.app (fun m -> m "%s" msg) in
+       handle_message ic
+     | `Result Client.End -> Logs_lwt.debug (fun m -> m "End of messages")
+     | `Error (exn, _) ->
+       Logs_lwt.debug (fun m -> m "Bad request: %s" (Base.Exn.to_string exn)))
+;;
+
 (** Handles the conenction *)
-let handle_connection ic oc msg =
+let handle_connection ic oc req =
   let%lwt () = Logs_lwt.debug (fun m -> m "Sending to server") in
   (* Get the message *)
   try%lwt
-    let%lwt () = Lwt_io.write_line oc msg in
+    let%lwt () = Lwt_io.write_line oc req in
     let%lwt () = Logs_lwt.debug (fun m -> m "Reading server response") in
-    let%lwt msg = Lwt_io.read_line_opt ic in
-    return_ok msg
+    handle_message ic
   with
   | Unix.Unix_error (e, _, _) ->
-    return_error
-    @@ K_error.SocketIOFailure
-         ("Failed to communicate with the server: " ^ Unix.error_message e)
+    Logs_lwt.debug (fun m ->
+      m "%s"
+      @@ K_error.output
+           (K_error.SocketIOFailure
+              ("Failed to communicate with the server: " ^ Unix.error_message e)))
 ;;
 
 let help_message () =
@@ -49,28 +70,12 @@ let rec client_loop ic oc =
   match msg with
   | "help" ->
     let%lwt () = help_message () in
-    return_ok ()
-  | ":q" -> return_ok ()
+    return_unit
+  | ":q" -> return_unit
   | msg ->
-    (match%lwt handle_connection ic oc msg with
-     | Ok (Some msg) ->
-       let%lwt () = Logs_lwt.app (fun m -> m "%s" msg) in
-       client_loop ic oc
-     | Ok None -> client_loop ic oc
-     | Error e -> return_error e)
-;;
-
-(** Perform a single request *)
-let single_request ic oc req =
-  let rec wait_for_response () =
-    match%lwt handle_connection ic oc req with
-    | Ok (Some msg) ->
-      let%lwt () = Logs_lwt.app (fun m -> m "%s" msg) in
-      wait_for_response ()
-    | Ok None -> return_unit
-    | Error e -> Logs_lwt.err (fun m -> m "%s" @@ K_error.output e)
-  in
-  wait_for_response ()
+    let%lwt () = handle_connection ic oc msg in
+    let%lwt () = Logs_lwt.app (fun m -> m "-------------------------------------") in
+    client_loop ic oc
 ;;
 
 (** Start the client *)
@@ -81,22 +86,23 @@ let start_client ?req paths =
   in
   match%lwt connect paths () with
   | Ok sock ->
-    (try%lwt
-       let ic = Lwt_io.of_fd ~mode:Lwt_io.Input sock in
-       let oc = Lwt_io.of_fd ~mode:Lwt_io.Output sock in
-       match req with
-       | Some req -> single_request ic oc req
-       | None ->
-         let%lwt () = help_message () in
-         (match%lwt client_loop ic oc with
-          | Ok _ -> return_unit
-          | Error e -> Logs_lwt.err (fun m -> m "%s" @@ K_error.output e))
-     with
-     | Unix.Unix_error (e, _, _) ->
-       Logs_lwt.err (fun m ->
-         m "%s"
-         @@ K_error.output
-         @@ K_error.SocketIOFailure
-              ("Failed to establish socket I/O channels: " ^ Unix.error_message e)))
+    Lwt.finalize
+      (fun () ->
+         try%lwt
+           let ic = Lwt_io.of_fd ~mode:Lwt_io.Input sock in
+           let oc = Lwt_io.of_fd ~mode:Lwt_io.Output sock in
+           match req with
+           | Some req -> handle_connection ic oc req
+           | None ->
+             let%lwt () = help_message () in
+             client_loop ic oc
+         with
+         | Unix.Unix_error (e, _, _) ->
+           Logs_lwt.err (fun m ->
+             m "%s"
+             @@ K_error.output
+             @@ K_error.SocketIOFailure
+                  ("Failed to establish socket I/O channels: " ^ Unix.error_message e)))
+      (fun () -> Lwt_unix.close sock)
   | Error e -> Logs_lwt.err (fun m -> m "%s" @@ K_error.output e)
 ;;

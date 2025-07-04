@@ -18,3 +18,14 @@
 (env
  (dev
   (flags :standard -warn-error -27-32-6-26)))
+
+(rule
+ (deps init.kak)
+ (target rc.ml)
+ (action
+  (with-stdout-to
+   rc.ml
+   (progn
+    (echo "let init = Base.String.strip {thisisaverycooldelimiter|")
+    (run cat init.kak)
+    (echo "|thisisaverycooldelimiter}")))))
