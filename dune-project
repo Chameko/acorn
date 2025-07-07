@@ -37,7 +37,9 @@
   (logs
    (>= 0.7.0))
   (cmdliner
-   (>= 1.3.0)))
+   (>= 1.3.0))
+  (stdint
+   (>= 0.7.2)))
  (tags
   (topics "to describe" your project)))
 

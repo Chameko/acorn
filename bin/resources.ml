@@ -31,6 +31,10 @@ let stdout_file paths = Stdlib.Filename.concat (kakorn_dir paths) "stdout.txt"
 let socket_file paths = Stdlib.Filename.concat (kakorn_dir paths) "socket"
 let kak_dir paths = Stdlib.Filename.concat paths.runtime_dir "kakoune"
 
+let kak_socket paths session =
+  Stdlib.Filename.concat (kak_dir paths) (Int.to_string session)
+;;
+
 (** Create the pid file *)
 let create_pid paths =
   let open Result in

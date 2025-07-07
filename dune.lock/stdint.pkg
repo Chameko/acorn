@@ -1,0 +1,17 @@
+(version 0.7.2)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends dune ocaml)
+
+(source
+ (fetch
+  (url
+   https://github.com/andrenth/ocaml-stdint/releases/download/0.7.2/stdint-0.7.2.tbz)
+  (checksum
+   sha256=1560198d8bc9c7af3ea952c40dabe82666694210ecc3fdf9bbfeb43211e977e6)))

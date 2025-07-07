@@ -46,3 +46,9 @@ let lwt_reporter () =
   in
   { Logs.report }
 ;;
+
+let log_and_ignore error error_msg =
+  match%lwt error with
+  | Ok () -> Lwt.return_unit
+  | Error e -> Logs_lwt.debug (fun m -> m "%s: %s" error_msg (output e))
+;;

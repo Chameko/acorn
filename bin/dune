@@ -11,7 +11,8 @@
   fmt
   stdio
   cmdliner
-  sexplib)
+  sexplib
+  stdint)
  (preprocess
   (pps lwt_ppx ppx_sexp_conv)))
 

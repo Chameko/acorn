@@ -55,16 +55,17 @@ let start init do_daemonize server request features =
           let () = daemonize paths in
           Server.start_server { paths; sessions = ref [] })
         else Server.start_server { paths; sessions = ref [] }
+      else if do_daemonize
+      then (
+        (* Dump the rc *)
+        Printf.printf "%s" Rc.init;
+        Stdlib.flush Stdlib.stdout;
+        daemonize paths;
+        let session = Kak.kak_session init paths in
+        Server.start_server { paths; sessions = ref [ session ] })
       else (
-        let session = Kak.kak_session init in
-        if do_daemonize
-        then (
-          (* Dump the rc *)
-          Printf.printf "%s" Rc.init;
-          Stdlib.flush Stdlib.stdout;
-          daemonize paths;
-          Server.start_server { paths; sessions = ref [ session ] })
-        else Server.start_server { paths; sessions = ref [ session ] })
+        let session = Kak.kak_session init paths in
+        Server.start_server { paths; sessions = ref [ session ] })
     else Client.start_client ?req:request paths
 ;;
 

@@ -51,6 +51,7 @@ let open_buffer server (session : Kak.session) name oc =
         ~mode:Lwt_io.Input
         fifo_name
     in
+    let%lwt () = Kak.kak_sock_send server.paths session "echo -debug Epic" in
     (* Inform kakoune of the buffer *)
     let%lwt () = Command.Client.client_output fifo_name oc in
     let open Kak in
@@ -67,11 +68,12 @@ let open_buffer server (session : Kak.session) name oc =
 ;;
 
 let init_session server cmd oc =
-  let session = Kak.kak_session cmd in
+  let session = Kak.kak_session cmd server.paths in
   if Option.is_none @@ List.find !(server.sessions) ~f:(fun s -> Int.equal s.id cmd)
   then (
     let () = server.sessions := session :: !(server.sessions) in
     let%lwt () = server_client_debug ("Initializing session " ^ Int.to_string cmd) oc in
+    let%lwt () = Kak.kak_sock_send server.paths session "echo -debug Hello kakoune" in
     let%lwt () =
       Lwt_io.write_line
         oc
@@ -86,7 +88,6 @@ let init_session server cmd oc =
 let handle_message server msg oc =
   let open Sexplib in
   let open Command in
-  (* Send debug to both client and server *)
   (* Process request *)
   match Sexp.of_string_conv msg Server.command_of_sexp with
   | `Result Term ->
