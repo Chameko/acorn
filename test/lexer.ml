@@ -1,8 +1,8 @@
 let%expect_test "lexer range" =
   Format.printf
     "%a"
-    (Format.pp_print_list Acorn.Token.pp)
-    (Acorn.Lexer.parse_text "Hello world");
+    (Format.pp_print_array Acorn.Token.pp)
+    (Dynarray.to_array @@ Acorn.Lexer.lex_text "Hello world");
   [%expect
     {|
     { Token.ty = (Token.Text "Hello");

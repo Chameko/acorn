@@ -6,4 +6,6 @@ type t
 val pp : Format.formatter -> t -> unit
 val show : t -> string
 val equal : t -> t -> bool
-val parse_text : string -> Token.t list
+
+(** Lex some text *)
+val lex_text : string -> Token.t Dynarray.t
