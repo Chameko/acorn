@@ -124,3 +124,5 @@ let fmt_of_char = function
   | '`' -> Some Monospace
   | _ -> None
 ;;
+
+let extract_location source loc = String.sub source loc.offset loc.length
