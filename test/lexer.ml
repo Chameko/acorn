@@ -6,10 +6,10 @@ let%expect_test "lexer range" =
   [%expect
     {|
     { Token.ty = (Token.Text "Hello");
-      location = { Token.offset = 0; length = 5 } }
+      location = { Token.Location.offset = 0; length = 5 } }
     { Token.ty = (Token.Whitespace " ");
-      location = { Token.offset = 5; length = 1 } }
+      location = { Token.Location.offset = 5; length = 1 } }
     { Token.ty = (Token.Text "world");
-      location = { Token.offset = 6; length = 5 } }
+      location = { Token.Location.offset = 6; length = 5 } }
     |}]
 ;;

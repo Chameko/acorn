@@ -1,9 +1,13 @@
-(** Where a token is located *)
-type loc =
-  { offset : int (** Offset from the start of the file *)
-  ; length : int (** The length of the token *)
-  }
-[@@deriving show, eq]
+module Location = struct
+  (** Where a token is located *)
+  type t =
+    { offset : int (** Offset from the start of the file *)
+    ; length : int (** The length of the token *)
+    }
+  [@@deriving show, eq]
+
+  let compare l1 l2 = Int.compare l1.offset l2.offset
+end
 
 (** The type for tokens *)
 type tt =
@@ -34,7 +38,7 @@ type tt =
 
 type t =
   { ty : tt
-  ; location : loc
+  ; location : Location.t
   }
 [@@deriving show, eq]
 

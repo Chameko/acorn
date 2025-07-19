@@ -204,7 +204,7 @@ let link_parser p_state =
        (match rbrace_parser p_state with
         | None -> None
         | Some (close_brace, p_state) ->
-          let open Token in
+          let open Token.Location in
           let location =
             match name, address with
             | Some name, address ->
@@ -240,7 +240,7 @@ let link_parser p_state =
           (match (inner_parser lbrace_parser rbrace_parser >> rbrace_parser) p_state with
            | None -> None
            | Some ((address, close_brace), p_state) ->
-             let open Token in
+             let open Token.Location in
              let location =
                let length =
                  open_brace.length
